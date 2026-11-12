@@ -1,0 +1,93 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2d3d; }
+
+.login-body { min-height: 100vh; display: flex; align-items: center; justify-content: center;
+              background: linear-gradient(135deg, #0d4a7a 0%, #2b7fc0 100%); }
+.login-card { background: #fff; width: 360px; padding: 32px 28px; border-radius: 12px;
+              box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+.login-titulo { margin: 0; text-align: center; font-size: 20px; color: #0d4a7a; }
+.login-sub { margin: 4px 0 20px; text-align: center; color: #5b6b7c; font-size: 14px; }
+label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; color: #0d4a7a; }
+input { width: 100%; padding: 10px; border: 1px solid #c9d6e2; border-radius: 6px; font-size: 14px; }
+input:focus { outline: 2px solid #2b7fc0; border-color: transparent; }
+button[type="submit"] { width: 100%; margin-top: 18px; padding: 11px; border: 0; border-radius: 6px;
+                        background: #1f6fb2; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+button[type="submit"]:hover { background: #185b93; }
+.alerta { background: #fdecea; color: #a12622; border: 1px solid #f5c2bf; padding: 9px 12px;
+          border-radius: 6px; font-size: 13px; margin-bottom: 8px; }
+
+.barra { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px;
+         background: #0d4a7a; color: #fff; }
+.marca { font-weight: 700; }
+.rol { background: #fff; color: #0d4a7a; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700; margin-left: 6px; }
+.contenedor { display: flex; min-height: calc(100vh - 52px); }
+.menu { width: 220px; background: #f3f7fb; border-right: 1px solid #dde7f0; padding: 16px 0; }
+.menu ul { list-style: none; margin: 0; padding: 0; }
+.menu a { display: block; padding: 9px 20px; color: #1f2d3d; text-decoration: none; font-size: 14px; }
+.menu a:hover { background: #e1ecf7; }
+.btn-salir { margin: 12px 20px; padding: 8px 14px; border: 1px solid #a12622; background: #fff; color: #a12622;
+             border-radius: 6px; cursor: pointer; }
+.contenido { flex: 1; padding: 28px 32px; }
+
+
+.menu a.activo { background: #e1ecf7; border-left: 4px solid #2b7fc0; font-weight: 600; color: #0d4a7a; }
+.menu .seccion { padding: 14px 20px 4px; font-size: 11px; color: #8a99a8; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; list-style: none; }
+.menu .deshabilitado { display: block; padding: 9px 20px; color: #9aa8b5; font-size: 14px; cursor: not-allowed; }
+.sub { color: #5b6b7c; margin-top: 4px; }
+.exito { background: #e8f7ee; color: #1e6b3a; border: 1px solid #bfe3cc; padding: 9px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 8px; }
+.tarjetas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 22px 0; }
+.tarjeta { background: #fff; border: 1px solid #dde7f0; border-radius: 8px; padding: 22px; text-align: center; }
+.tarjeta strong { display: block; font-size: 34px; color: #0d4a7a; }
+.tarjeta span { color: #5b6b7c; font-size: 14px; }
+.panel { background: #fff; border: 1px solid #dde7f0; border-radius: 8px; padding: 20px; }
+.panel h3 { margin: 0 0 14px; color: #0d4a7a; font-size: 16px; }
+.accesos { display: flex; gap: 10px; flex-wrap: wrap; }
+.boton { padding: 9px 16px; border-radius: 6px; background: #1f6fb2; color: #fff; text-decoration: none; font-size: 14px; }
+.boton:hover { background: #185b93; }
+.boton.deshabilitado { background: #e6ebf0; color: #7b8a99; cursor: not-allowed; }
+
+.menu { position: sticky; top: 0; height: calc(100vh - 52px); overflow-y: auto; display: flex; flex-direction: column; }
+.menu ul { flex: 1; }
+.menu form { display: flex; justify-content: center; margin: 0; }
+.btn-salir { width: auto; margin: 12px 0; padding: 8px 22px; text-align: center; }
+
+.formulario { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+.formulario select { width: 100%; padding: 10px; border: 1px solid #c9d6e2; border-radius: 6px; font-size: 14px; background: #fff; }
+.acciones-form { grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 12px; }
+.boton { border: 0; cursor: pointer; }
+.boton.gris { background: #95a5a6; }
+.boton.gris:hover { background: #7f8c8d; }
+.boton.pequeno { padding: 5px 12px; font-size: 12px; }
+.boton.peligro { background: #c0392b; }
+.boton.peligro:hover { background: #a93226; }
+
+.tabla { border-collapse: separate; border-spacing: 0; border: 1px solid #dde4ec; border-radius: 8px; overflow: hidden; }
+.tabla th { background: #e9eef4; color: #1f2d3d; font-weight: 700; font-size: 13px; padding: 11px 14px; border-bottom: 1px solid #dde4ec; }
+.tabla td { padding: 11px 14px; border-bottom: 1px solid #eef2f6; color: #1f2d3d; }
+.tabla tbody tr:last-child td { border-bottom: 0; }
+
+.tabla .acciones { display: flex; gap: 6px; align-items: center; }
+.estado { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.estado.activo { background: #d4edda; color: #155724; }
+.estado.inactivo { background: #f8d7da; color: #721c24; }
+.vacio { text-align: center; color: #7b8a99; padding: 24px; }
+.boton, .boton.pequeno { font-family: inherit; line-height: 1; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; height: 30px; min-width: 96px; margin: 0; }
+.tabla .acciones form { display: inline-flex; margin: 0; }
+
+.buscar { display: flex; gap: 10px; align-items: flex-end; }
+.buscar > div { flex: 1; }
+.buscar label { margin-top: 0; }
+.error-campo { color: #a12622; font-size: 12px; display: block; margin-top: 4px; }
+
+button[type="submit"] { width: auto; margin-top: 0; }
+.login-card button[type="submit"] { width: 100%; margin-top: 18px; }
+.buscar { display: flex; gap: 10px; align-items: flex-end; }
+.buscar > div { flex: 1 1 auto; min-width: 280px; }
+.buscar input { width: 100%; }
+.buscar > .boton, .buscar > a.boton { flex: 0 0 auto; }
+
+button[type="submit"] { width: 100%; margin-top: 18px; }
+.buscar button[type="submit"], .tabla button[type="submit"] { width: auto; margin-top: 0; }
+.boton { height: auto; min-width: 0; display: inline-block; line-height: normal; }
+.boton.pequeno { height: 30px; min-width: 96px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; font-family: inherit; box-sizing: border-box; margin: 0; padding: 5px 12px; font-size: 12px; }
+.tabla .acciones form { display: inline-flex; margin: 0; }

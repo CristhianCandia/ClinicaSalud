@@ -9,44 +9,56 @@ use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\PerfilPacienteController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PagoController;
+use Illuminate\Support\Facades\Route;
 
-// RUTAS PÚBLICAS
-Route::get('/', fn () => redirect()->route('login'));
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.process');
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+// CU-01 Iniciar sesión
+Route::get('/', fn () => redirect()->route(auth()->check() ? 'inicio' : 'login'));
+
+Route::get('/login', [AuthController::class, 'mostrarLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'iniciarSesion'])
+    ->middleware('throttle:5,1')   // máximo 5 intentos por minuto
+    ->name('login.enviar');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/inicio', [AuthController::class, 'inicio'])->name('inicio');
+    Route::post('/logout', [AuthController::class, 'cerrarSesion'])->name('logout');
+});
+
+// Ruta de prueba del control por rol (para verificar el 403)
+Route::middleware(['auth', 'rol:ADMINISTRADOR'])
+    ->get('/administracion', fn () => 'Solo administradores')
+    ->name('administracion');
 
 // Registro público de pacientes
 Route::get('/registro', [RegistroController::class, 'showRegistro'])->name('registro');
 Route::post('/registro', [RegistroController::class, 'store'])->name('registro.store');
 
 // RUTAS DE ADMINISTRADOR
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'rol:ADMINISTRADOR'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-    
+
     // Gestión de Usuarios
     Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
     Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
     Route::get('/usuarios/{usuario}/edit', [UsuarioController::class, 'edit'])->name('usuarios.edit');
     Route::put('/usuarios/{usuario}', [UsuarioController::class, 'update'])->name('usuarios.update');
     Route::patch('/usuarios/{usuario}/toggle', [UsuarioController::class, 'toggleEstado'])->name('usuarios.toggle');
-    
+
     // Gestión de Especialidades
     Route::get('/especialidades', [EspecialidadController::class, 'index'])->name('especialidades.index');
     Route::post('/especialidades', [EspecialidadController::class, 'store'])->name('especialidades.store');
     Route::get('/especialidades/{id}/edit', [EspecialidadController::class, 'edit'])->name('especialidades.edit');
     Route::put('/especialidades/{id}', [EspecialidadController::class, 'update'])->name('especialidades.update');
     Route::patch('/especialidades/{id}/toggle', [EspecialidadController::class, 'toggleEstado'])->name('especialidades.toggle');
-    
+
     // Gestión de Médicos
     Route::get('/medicos', [MedicoController::class, 'index'])->name('medicos.index');
     Route::post('/medicos', [MedicoController::class, 'store'])->name('medicos.store');
     Route::get('/medicos/{id}/edit', [MedicoController::class, 'edit'])->name('medicos.edit');
     Route::put('/medicos/{id}', [MedicoController::class, 'update'])->name('medicos.update');
     Route::patch('/medicos/{id}/toggle', [MedicoController::class, 'toggleEstado'])->name('medicos.toggle');
-    
+
     // Gestión de Horarios (CU-08)
     Route::get('/horarios', [HorarioController::class, 'index'])->name('horarios.index');
     Route::post('/horarios', [HorarioController::class, 'store'])->name('horarios.store');
@@ -56,11 +68,11 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 });
 
 // RUTAS DE RECEPCIONISTA
-Route::middleware(['auth'])->prefix('recepcionista')->name('recepcionista.')->group(function () {
+Route::middleware(['auth', 'rol:RECEPCIONISTA'])->prefix('recepcionista')->name('recepcionista.')->group(function () {
     Route::get('/dashboard', function () {
         return view('recepcionista.dashboard');
     })->name('dashboard');
-    
+
     Route::get('/pacientes', [PacienteController::class, 'index'])->name('pacientes.index');
     Route::post('/pacientes', [PacienteController::class, 'store'])->name('pacientes.store');
     Route::get('/pacientes/{id}/edit', [PacienteController::class, 'edit'])->name('pacientes.edit');
@@ -77,7 +89,7 @@ Route::middleware(['auth'])->prefix('paciente')->name('paciente.')->group(functi
     Route::get('/dashboard', function () {
         return view('paciente.dashboard');
     })->name('dashboard');
-    
+
     Route::get('/perfil', [PerfilPacienteController::class, 'show'])->name('perfil');
     Route::put('/perfil', [PerfilPacienteController::class, 'update'])->name('perfil.update');
 });

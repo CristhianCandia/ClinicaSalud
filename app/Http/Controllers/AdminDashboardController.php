@@ -2,19 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\DB;
+use App\Models\Cita;
+use App\Models\Especialidad;
+use App\Models\Medico;
+use App\Models\Paciente;
 
 class AdminDashboardController extends Controller
 {
     public function index()
     {
-        // Obtenemos las estadísticas directamente de la base de datos
-        // para evitar errores de modelos que aún no hemos creado
+        $hoy = now('America/La_Paz')->toDateString();
+
         $estadisticas = [
-            'medicos' => DB::table('medicos')->where('estado', true)->count(),
-            'especialidades' => DB::table('especialidades')->where('estado', true)->count(),
-            'pacientes' => DB::table('pacientes')->where('estado', true)->count(),
-            'citas_hoy' => DB::table('citas')->whereDate('fecha', today())->count(),
+            'medicos' => Medico::where('estado', true)->count(),
+            'especialidades' => Especialidad::where('estado', true)->count(),
+            'pacientes' => Paciente::where('estado', true)->count(),
+            'citas_hoy' => Cita::whereDate('fecha', $hoy)
+                ->where('estado', '!=', 'CANCELADA')
+                ->count(),
         ];
 
         return view('admin.dashboard', compact('estadisticas'));

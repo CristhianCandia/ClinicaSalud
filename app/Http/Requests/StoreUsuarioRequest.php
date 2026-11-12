@@ -14,24 +14,10 @@ class StoreUsuarioRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nombre_usuario' => [
-                'required',
-                'string',
-                'max:50',
-                'unique:usuarios,nombre_usuario', // Excepción: Usuario duplicado
-            ],
-            'correo' => [
-                'required',
-                'email',
-                'max:120',
-                'unique:usuarios,correo', // Excepción: Correo duplicado
-            ],
-            'contrasena' => [
-                'required',
-                'string',
-                'min:8', // Excepción: Contraseña menor a 8 caracteres
-            ],
-            'rol_id' => 'required|exists:roles,id',
+            'nombre_usuario' => ['required', 'string', 'max:50', 'unique:usuario,nombre_usuario'],
+            'correo' => ['required', 'email', 'max:120', 'unique:usuario,correo'],
+            'contrasena' => ['required', 'string', 'min:8'],
+            'id_rol' => ['required', 'exists:rol,id_rol'],
         ];
     }
 
@@ -45,8 +31,8 @@ class StoreUsuarioRequest extends FormRequest
             'correo.unique' => 'Ese correo ya está registrado.',
             'contrasena.required' => 'La contraseña es obligatoria.',
             'contrasena.min' => 'La contraseña debe tener al menos 8 caracteres.',
-            'rol_id.required' => 'El rol es obligatorio.',
-            'rol_id.exists' => 'El rol seleccionado no es válido.',
+            'id_rol.required' => 'El rol es obligatorio.',
+            'id_rol.exists' => 'El rol seleccionado no es válido.',
         ];
     }
 }
