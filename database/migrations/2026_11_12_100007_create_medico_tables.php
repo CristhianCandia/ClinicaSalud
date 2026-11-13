@@ -51,6 +51,7 @@ return new class extends Migration
         DB::statement('ALTER TABLE horario_atencion ADD CONSTRAINT ck_horario_duracion CHECK (duracion_cita_min BETWEEN 10 AND 120)');
         DB::statement('ALTER TABLE horario_atencion ADD CONSTRAINT ck_horario_rango CHECK (hora_fin > hora_inicio)');
         // RF05: no se permiten horarios superpuestos para un mismo médico y día
+        DB::statement('CREATE EXTENSION IF NOT EXISTS btree_gist;');
         DB::statement("ALTER TABLE horario_atencion ADD CONSTRAINT ex_horario_superpuesto EXCLUDE USING gist (
             id_medico WITH =, dia_semana WITH =,
             tsrange('2000-01-01'::date + hora_inicio, '2000-01-01'::date + hora_fin) WITH &&
