@@ -3,167 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Crear cuenta de paciente - Clínica Vida Salud</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body {
-            background: linear-gradient(135deg, #1e5f8e 0%, #2980b9 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .register-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            padding: 40px 35px;
-            width: 100%;
-            max-width: 700px;
-        }
-        .register-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .register-header .logo { font-size: 28px; color: #2980b9; margin-bottom: 5px; }
-        .register-header h1 { color: #2c3e50; font-size: 22px; margin-bottom: 5px; }
-        .register-header p { color: #7f8c8d; font-size: 14px; }
-        
-        .form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label {
-            display: block; color: #34495e; font-size: 13px; font-weight: 600; margin-bottom: 6px;
-        }
-        .form-group label .required { color: #e74c3c; }
-        .form-group input, .form-group select {
-            width: 100%; padding: 10px 12px; border: 1px solid #ddd;
-            border-radius: 5px; font-size: 14px; transition: border 0.3s;
-        }
-        .form-group input:focus, .form-group select:focus {
-            outline: none; border-color: #2980b9;
-        }
-        
-        .btn {
-            padding: 10px 20px; border: none; border-radius: 5px;
-            cursor: pointer; font-size: 14px; font-weight: 600;
-            transition: all 0.3s; text-decoration: none; display: inline-block;
-        }
-        .btn-primary { background: #2980b9; color: white; }
-        .btn-primary:hover { background: #1e5f8e; }
-        .btn-secondary { background: #95a5a6; color: white; }
-        .btn-secondary:hover { background: #7f8c8d; }
-        
-        .alert {
-            padding: 12px 15px; border-radius: 5px; margin-bottom: 20px; font-size: 14px;
-        }
-        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        
-        .info-text { color: #7f8c8d; font-size: 12px; margin-top: 15px; }
-        .button-group { display: flex; gap: 10px; margin-top: 20px; }
-    </style>
+    <title>Crear cuenta · Clínica Vida Salud</title>
+    <link rel="stylesheet" href="{{ asset('css/estilos.css') }}">
 </head>
-<body>
+<body class="login-body">
+    <main class="login-card" style="width: 720px; max-width: 95vw;">
+        <h1 class="login-titulo">✚ Clínica Vida Salud</h1>
+        <p class="login-sub">Crear cuenta de paciente</p>
 
-    <div class="register-card">
-        <div class="register-header">
-            <div class="logo">✚</div>
-            <h1>Clínica Vida Salud</h1>
-            <p>Crear cuenta de paciente</p>
-        </div>
-
-        @if(session('exito'))
-            <div class="alert alert-success">{{ session('exito') }}</div>
-        @endif
-
-        @if($errors->any())
-            <div class="alert alert-danger">
-                <ul style="margin: 0; padding-left: 20px;">
-                    @foreach($errors->all() as $error)
+        @if ($errors->any())
+            <div class="alerta" role="alert">
+                <ul style="margin: 0; padding-left: 18px;">
+                    @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
                 </ul>
             </div>
         @endif
 
-        <form method="POST" action="{{ route('registro.store') }}">
+        <form method="POST" action="{{ route('registro.guardar') }}" class="formulario">
             @csrf
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label>CI <span class="required">*</span></label>
-                    <input type="text" name="ci" value="{{ old('ci') }}" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Nombres <span class="required">*</span></label>
-                    <input type="text" name="nombres" value="{{ old('nombres') }}" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Apellidos <span class="required">*</span></label>
-                    <input type="text" name="apellidos" value="{{ old('apellidos') }}" required>
-                </div>
+            <div>
+                <label for="ci">CI *</label>
+                <input id="ci" name="ci" type="text" value="{{ old('ci') }}">
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Fecha de nacimiento <span class="required">*</span></label>
-                    <input type="date" name="fecha_nacimiento" value="{{ old('fecha_nacimiento') }}" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Sexo <span class="required">*</span></label>
-                    <select name="sexo" required>
-                        <option value="">Seleccione...</option>
-                        <option value="M" {{ old('sexo') == 'M' ? 'selected' : '' }}>Masculino</option>
-                        <option value="F" {{ old('sexo') == 'F' ? 'selected' : '' }}>Femenino</option>
-                        <option value="O" {{ old('sexo') == 'O' ? 'selected' : '' }}>Otro</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Teléfono <span class="required">*</span></label>
-                    <input type="text" name="telefono" value="{{ old('telefono') }}" required>
-                </div>
+            <div>
+                <label for="nombres">Nombres *</label>
+                <input id="nombres" name="nombres" type="text" value="{{ old('nombres') }}">
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Correo electrónico</label>
-                    <input type="email" name="correo" value="{{ old('correo') }}">
-                </div>
-
-                <div class="form-group" style="grid-column: span 2;">
-                    <label>Dirección</label>
-                    <input type="text" name="direccion" value="{{ old('direccion') }}">
-                </div>
+            <div>
+                <label for="apellidos">Apellidos *</label>
+                <input id="apellidos" name="apellidos" type="text" value="{{ old('apellidos') }}">
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Contraseña <span class="required">*</span></label>
-                    <input type="password" name="contrasena" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Confirmar contraseña <span class="required">*</span></label>
-                    <input type="password" name="contrasena_confirmation" required>
-                </div>
+            <div>
+                <label for="fecha_nacimiento">Fecha de nacimiento *</label>
+                <input id="fecha_nacimiento" name="fecha_nacimiento" type="date" value="{{ old('fecha_nacimiento') }}">
             </div>
 
-            <p class="info-text">
+            <div>
+                <label for="sexo">Sexo *</label>
+                <select id="sexo" name="sexo">
+                    <option value="">Seleccione...</option>
+                    <option value="M" {{ old('sexo') === 'M' ? 'selected' : '' }}>Masculino</option>
+                    <option value="F" {{ old('sexo') === 'F' ? 'selected' : '' }}>Femenino</option>
+                    <option value="O" {{ old('sexo') === 'O' ? 'selected' : '' }}>Otro</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="telefono">Teléfono *</label>
+                <input id="telefono" name="telefono" type="text" value="{{ old('telefono') }}">
+            </div>
+
+            <div>
+                <label for="correo">Correo electrónico *</label>
+                <input id="correo" name="correo" type="email" value="{{ old('correo') }}">
+            </div>
+
+            <div>
+                <label for="direccion">Dirección</label>
+                <input id="direccion" name="direccion" type="text" value="{{ old('direccion') }}">
+            </div>
+
+            <div></div>
+
+            <div>
+                <label for="password">Contraseña *</label>
+                <input id="password" name="password" type="password">
+            </div>
+
+            <div>
+                <label for="password_confirmation">Confirmar contraseña *</label>
+                <input id="password_confirmation" name="password_confirmation" type="password">
+            </div>
+
+            <p class="sub" style="grid-column: 1 / -1; margin: 8px 0 0;">
                 Su usuario para iniciar sesión será su CI o su correo electrónico. El correo es obligatorio para crear la cuenta.
             </p>
 
-            <div class="button-group">
-                <button type="submit" class="btn btn-primary">Crear cuenta</button>
-                <a href="{{ route('login') }}" class="btn btn-secondary">Volver</a>
+            <div class="acciones-form" style="grid-column: 1 / -1;">
+                <button type="submit" class="boton" style="width: auto; margin-top: 0;">Crear cuenta</button>
+                <a class="boton gris" href="{{ route('login') }}">Volver</a>
             </div>
         </form>
-    </div>
-
+    </main>
 </body>
 </html>

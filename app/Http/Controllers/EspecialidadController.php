@@ -2,141 +2,113 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Especialidad;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
+// CU-06 Gestionar especialidades
 class EspecialidadController extends Controller
 {
-    /**
-     * Mostrar lista de especialidades
-     */
     public function index()
     {
-        $especialidades = DB::table('especialidades')
-            ->select('especialidades.*', 
-                     DB::raw('(SELECT COUNT(*) FROM especialidad_medico WHERE especialidad_id = especialidades.id) as total_medicos'))
-            ->orderBy('especialidades.nombre', 'asc')
-            ->get();
-
-        return view('admin.especialidades.index', compact('especialidades'));
+        return $this->vista();
     }
 
-    /**
-     * Registrar nueva especialidad
-     */
     public function store(Request $request)
     {
-        // Validación
-        $request->validate([
-            'nombre' => 'required|string|max:60',
-            'descripcion' => 'nullable|string|max:200',
-        ], [
-            'nombre.required' => 'El nombre de la especialidad es obligatorio.',
-        ]);
+        $datos = $this->validar($request);
+        $nombre = $this->normalizar($datos['nombre']);
 
-        // Normalizar nombre (minúsculas y sin espacios extras)
-        $nombreNormalizado = strtolower(trim($request->nombre));
-
-        // Verificar si ya existe (ignorando mayúsculas/minúsculas)
-        $existe = DB::table('especialidades')
-            ->whereRaw('LOWER(TRIM(nombre)) = ?', [$nombreNormalizado])
-            ->first();
-
-        if ($existe) {
-            return back()
-                ->withInput()
-                ->with('error', 'La especialidad ya está registrada.');
+        // Flujo 4 y excepción "Nombre repetido (normalizado)"
+        if ($this->nombreRepetido($nombre)) {
+            return back()->withInput()
+                ->withErrors(['nombre' => 'La especialidad ya está registrada.']);
         }
 
-        // Insertar especialidad
-        DB::table('especialidades')->insert([
-            'nombre' => $request->nombre,
-            'descripcion' => $request->descripcion,
+        Especialidad::create([
+            'nombre' => $nombre,
+            'descripcion' => $datos['descripcion'] ?? null,
             'estado' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
 
-        return back()->with('exito', 'Especialidad registrada.');
+        return redirect()->route('admin.especialidades.index')
+            ->with('exito', 'Especialidad registrada.');
     }
 
-    /**
-     * Cargar datos para editar
-     */
     public function edit($id)
     {
-        $especialidad = DB::table('especialidades')->where('id', $id)->first();
+        $especialidad = Especialidad::findOrFail($id);
 
-        if (!$especialidad) {
-            return back()->with('error', 'Especialidad no encontrada.');
-        }
-
-        $especialidades = DB::table('especialidades')
-            ->select('especialidades.*', 
-                     DB::raw('(SELECT COUNT(*) FROM especialidad_medico WHERE especialidad_id = especialidades.id) as total_medicos'))
-            ->orderBy('especialidades.nombre', 'asc')
-            ->get();
-
-        $especialidadEditando = $especialidad;
-
-        return view('admin.especialidades.index', compact('especialidades', 'especialidadEditando'));
+        return $this->vista(['editando' => $especialidad]);
     }
 
-    /**
-     * Actualizar especialidad
-     */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'nombre' => 'required|string|max:60',
-            'descripcion' => 'nullable|string|max:200',
-        ]);
+        $especialidad = Especialidad::findOrFail($id);
+        $datos = $this->validar($request);
+        $nombre = $this->normalizar($datos['nombre']);
 
-        // Normalizar nombre
-        $nombreNormalizado = strtolower(trim($request->nombre));
-
-        // Verificar si existe otro registro con el mismo nombre (excluyendo el actual)
-        $existe = DB::table('especialidades')
-            ->where('id', '!=', $id)
-            ->whereRaw('LOWER(TRIM(nombre)) = ?', [$nombreNormalizado])
-            ->first();
-
-        if ($existe) {
-            return back()
-                ->withInput()
-                ->with('error', 'La especialidad ya está registrada.');
+        if ($this->nombreRepetido($nombre, $especialidad->id_especialidad)) {
+            return back()->withInput()
+                ->withErrors(['nombre' => 'La especialidad ya está registrada.']);
         }
 
-        // Actualizar
-        DB::table('especialidades')->where('id', $id)->update([
-            'nombre' => $request->nombre,
-            'descripcion' => $request->descripcion,
-            'updated_at' => now(),
+        $especialidad->update([
+            'nombre' => $nombre,
+            'descripcion' => $datos['descripcion'] ?? null,
         ]);
 
         return redirect()->route('admin.especialidades.index')
             ->with('exito', 'Especialidad actualizada.');
     }
 
-    /**
-     * Activar/Desactivar especialidad
-     */
     public function toggleEstado($id)
     {
-        $especialidad = DB::table('especialidades')->where('id', $id)->first();
+        $especialidad = Especialidad::findOrFail($id);
+        $especialidad->update(['estado' => ! $especialidad->estado]);
 
-        if (!$especialidad) {
-            return back()->with('error', 'Especialidad no encontrada.');
-        }
+        return redirect()->route('admin.especialidades.index')
+            ->with('exito', $especialidad->estado ? 'Especialidad activada.' : 'Especialidad desactivada.');
+    }
 
-        $nuevoEstado = !$especialidad->estado;
-
-        DB::table('especialidades')->where('id', $id)->update([
-            'estado' => $nuevoEstado,
-            'updated_at' => now(),
+    private function validar(Request $request): array
+    {
+        return $request->validate([
+            'nombre' => ['required', 'string', 'max:60'],
+            'descripcion' => ['nullable', 'string', 'max:200'],
+        ], [
+            'nombre.required' => 'El nombre es obligatorio.',
+            'nombre.max' => 'El nombre no puede tener más de 60 caracteres.',
+            'descripcion.max' => 'La descripción no puede tener más de 200 caracteres.',
         ]);
+    }
 
-        $accion = $nuevoEstado ? 'activada' : 'desactivada';
-        return back()->with('exito', "Especialidad {$accion}.");
+    // Quita espacios sobrantes y deja uno solo entre palabras
+    private function normalizar(string $texto): string
+    {
+        return preg_replace('/\s+/u', ' ', trim($texto));
+    }
+
+    // Compara sin importar mayúsculas ni espacios (RF04)
+    private function nombreRepetido(string $nombre, ?int $ignorarId = null): bool
+    {
+        return Especialidad::query()
+            ->whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower($nombre)])
+            ->when($ignorarId, fn ($q) => $q->where('id_especialidad', '!=', $ignorarId))
+            ->exists();
+    }
+
+    private function vista(array $extra = [])
+    {
+        $especialidades = Especialidad::query()
+            ->select('especialidad.*')
+            ->selectRaw('(SELECT COUNT(*) FROM medico_especialidad me
+                          WHERE me.id_especialidad = especialidad.id_especialidad) AS medicos_count')
+            ->orderBy('nombre')
+            ->get();
+
+        return view('admin.especialidades.index', array_merge([
+            'especialidades' => $especialidades,
+            'editando' => null,
+        ], $extra));
     }
 }

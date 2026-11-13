@@ -77,6 +77,11 @@ class AuthController extends Controller
             return redirect()->route('recepcionista.dashboard');
         }
 
+        // CU-05: el paciente va directo a su perfil
+        if ($usuario->rol->nombre === 'PACIENTE') {
+            return redirect()->route('paciente.perfil');
+        }
+
         return view('inicio', [
             'usuario' => $usuario,
             'menu' => config('menus.' . $usuario->rol->nombre, []),

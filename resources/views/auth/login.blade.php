@@ -9,7 +9,7 @@
 <body class="login-body">
     <main class="login-card">
         <h1 class="login-titulo">✚ Clínica Vida Salud</h1>
-        <p class="login-sub">Gestión de citas médicas</p>
+        <p class="login-sub" style="margin-top: 16px;">¿Eres paciente? <a href="{{ route('registro') }}">Crea tu cuenta</a></p>
 
         @if ($errors->has('general'))
             @if (session('exito'))

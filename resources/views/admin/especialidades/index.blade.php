@@ -1,127 +1,89 @@
 @extends('layouts.admin')
 
-@section('title', 'Gestionar especialidades')
-@section('page-title', 'Gestionar especialidades')
+@section('title', 'Especialidades')
 
 @section('content')
-    <p style="color: #7f8c8d; margin-bottom: 20px; font-size: 14px;">
-        El nombre no puede repetirse, sin importar mayúsculas o espacios
-    </p>
+    <h2>Gestionar especialidades</h2>
+    <p class="sub">El nombre no puede repetirse, sin importar mayúsculas o espacios</p>
 
-    <!-- TARJETA: NUEVA ESPECIALIDAD -->
-    <div style="background: white; border-radius: 8px; padding: 25px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <h3 style="color: #2c3e50; font-size: 16px; margin-bottom: 15px;">
-            {{ isset($especialidadEditando) ? 'Editar especialidad' : 'Nueva especialidad' }}
-        </h3>
+    @if (session('exito'))
+        <div class="exito" role="status" style="margin-top: 16px;">{{ session('exito') }}</div>
+    @endif
 
-        @if(session('error'))
-            <div class="alert alert-danger" style="margin-bottom: 15px;">
-                {{ session('error') }}
-            </div>
-        @endif
+    <div class="panel" style="margin-top: 20px;">
+        <h3>{{ $editando ? 'Editar especialidad' : 'Nueva especialidad' }}</h3>
 
-        <form method="POST" action="{{ isset($especialidadEditando) ? route('admin.especialidades.update', $especialidadEditando->id) : route('admin.especialidades.store') }}">
+        <form method="POST"
+              action="{{ $editando
+                    ? route('admin.especialidades.update', $editando->id_especialidad)
+                    : route('admin.especialidades.store') }}"
+              class="formulario">
             @csrf
-            @if(isset($especialidadEditando))
+            @if ($editando)
                 @method('PUT')
             @endif
 
-            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 15px;">
-                <div>
-                    <label style="display: block; margin-bottom: 5px; color: #34495e; font-size: 13px; font-weight: 500;">
-                        Nombre <span style="color: #e74c3c;">*</span>
-                    </label>
-                    <input type="text" name="nombre" 
-                           value="{{ old('nombre', $especialidadEditando->nombre ?? '') }}" 
-                           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;"
-                           required>
-                    @error('nombre')
-                        <small style="color: #e74c3c; font-size: 12px;">{{ $message }}</small>
-                    @enderror
-                </div>
-
-                <div>
-                    <label style="display: block; margin-bottom: 5px; color: #34495e; font-size: 13px; font-weight: 500;">
-                        Descripción
-                    </label>
-                    <input type="text" name="descripcion" 
-                           value="{{ old('descripcion', $especialidadEditando->descripcion ?? '') }}" 
-                           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                </div>
+            <div>
+                <label for="nombre">Nombre *</label>
+                <input id="nombre" name="nombre" type="text"
+                       value="{{ old('nombre', $editando->nombre ?? '') }}">
+                @error('nombre') <small class="error-campo">{{ $message }}</small> @enderror
             </div>
 
-            <button type="submit" class="btn btn-primary">
-                {{ isset($especialidadEditando) ? 'Actualizar' : 'Guardar' }}
-            </button>
-            
-            @if(isset($especialidadEditando))
-                <a href="{{ route('admin.especialidades.index') }}" class="btn btn-secondary" style="margin-left: 10px;">
-                    Cancelar
-                </a>
-            @endif
+            <div>
+                <label for="descripcion">Descripción</label>
+                <input id="descripcion" name="descripcion" type="text"
+                       value="{{ old('descripcion', $editando->descripcion ?? '') }}">
+                @error('descripcion') <small class="error-campo">{{ $message }}</small> @enderror
+            </div>
+
+            <div class="acciones-form" style="grid-column: 1 / -1;">
+                <button type="submit" class="boton">{{ $editando ? 'Actualizar' : 'Guardar' }}</button>
+                @if ($editando)
+                    <a class="boton gris" href="{{ route('admin.especialidades.index') }}">Cancelar</a>
+                @endif
+            </div>
         </form>
     </div>
 
-    <!-- TARJETA: LISTA DE ESPECIALIDADES -->
-    <div style="background: white; border-radius: 8px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <table style="width: 100%; border-collapse: collapse;">
+    <div class="panel" style="margin-top: 20px;">
+        <table class="tabla">
             <thead>
-                <tr style="border-bottom: 2px solid #ecf0f1;">
-                    <th style="text-align: left; padding: 12px 15px; color: #2c3e50; font-size: 13px; font-weight: 600;">Especialidad</th>
-                    <th style="text-align: left; padding: 12px 15px; color: #2c3e50; font-size: 13px; font-weight: 600;">Descripción</th>
-                    <th style="text-align: left; padding: 12px 15px; color: #2c3e50; font-size: 13px; font-weight: 600;">Médicos</th>
-                    <th style="text-align: left; padding: 12px 15px; color: #2c3e50; font-size: 13px; font-weight: 600;">Estado</th>
-                    <th style="text-align: left; padding: 12px 15px; color: #2c3e50; font-size: 13px; font-weight: 600;">Acciones</th>
+                <tr>
+                    <th>Especialidad</th>
+                    <th>Descripción</th>
+                    <th>Médicos</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse($especialidades as $esp)
-                    <tr style="border-bottom: 1px solid #ecf0f1;">
-                        <td style="padding: 12px 15px; font-weight: 600; color: #2c3e50;">
-                            {{ $esp->nombre }}
+                @forelse ($especialidades as $e)
+                    <tr>
+                        <td>{{ $e->nombre }}</td>
+                        <td>{{ $e->descripcion ?? '—' }}</td>
+                        <td>{{ $e->medicos_count }}</td>
+                        <td>
+                            <span class="estado {{ $e->estado ? 'activo' : 'inactivo' }}">
+                                {{ $e->estado ? 'Activa' : 'Inactiva' }}
+                            </span>
                         </td>
-                        <td style="padding: 12px 15px; color: #34495e;">
-                            {{ $esp->descripcion ?? '—' }}
-                        </td>
-                        <td style="padding: 12px 15px; color: #34495e;">
-                            {{ $esp->total_medicos ?? 0 }}
-                        </td>
-                        <td style="padding: 12px 15px;">
-                            @if($esp->estado)
-                                <span style="background: #d4edda; color: #155724; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
-                                    Activa
-                                </span>
-                            @else
-                                <span style="background: #f8d7da; color: #721c24; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
-                                    Inactiva
-                                </span>
-                            @endif
-                        </td>
-                        <td style="padding: 12px 15px;">
-                            <div style="display: flex; gap: 5px;">
-                                <a href="{{ route('admin.especialidades.edit', $esp->id) }}" 
-                                   class="btn btn-primary" style="padding: 5px 12px; font-size: 12px;">
-                                    Editar
-                                </a>
-
-                                <form method="POST" action="{{ route('admin.especialidades.toggle', $esp->id) }}" 
-                                      style="display: inline;">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit" 
-                                            onclick="return confirm('¿Estás seguro de cambiar el estado de esta especialidad?')"
-                                            class="btn btn-danger" style="padding: 5px 12px; font-size: 12px;">
-                                        {{ $esp->estado ? 'Desactivar' : 'Activar' }}
-                                    </button>
-                                </form>
-                            </div>
+                        <td class="acciones">
+                            <a class="boton pequeno" href="{{ route('admin.especialidades.edit', $e->id_especialidad) }}">Editar</a>
+                            <form method="POST" action="{{ route('admin.especialidades.toggle', $e->id_especialidad) }}">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit"
+                                        class="boton pequeno {{ $e->estado ? 'peligro' : '' }}"
+                                        onclick="return confirm('¿Estás seguro de cambiar el estado de esta especialidad?')">
+                                    {{ $e->estado ? 'Desactivar' : 'Activar' }}
+                                </button>
+                            </form>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" style="text-align: center; padding: 30px; color: #7f8c8d;">
-                            No hay especialidades registradas.
-                        </td>
+                        <td colspan="5" class="vacio">No hay especialidades registradas.</td>
                     </tr>
                 @endforelse
             </tbody>

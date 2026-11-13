@@ -1,8 +1,12 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+// Tabla "medico" del esquema v3 (no usa created_at ni updated_at).
 class Medico extends Model
 {
     protected $table = 'medico';
@@ -11,21 +15,22 @@ class Medico extends Model
 
     protected $fillable = [
         'codigo', 'registro_profesional', 'nombres', 'apellidos',
-        'telefono', 'correo', 'id_usuario', 'estado'
+        'telefono', 'correo', 'id_usuario', 'estado',
     ];
 
-    protected $casts = ['estado' => 'boolean', 'fecha_creacion' => 'datetime'];
+    protected $casts = [
+        'estado' => 'boolean',
+        'fecha_creacion' => 'datetime',
+        'fecha_actualizacion' => 'datetime',
+    ];
 
-    public function usuario() { return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario'); }
-    
-    // Relación muchos a muchos con Especialidad
-    public function especialidades() {
-        return $this->belongsToMany(Especialidad::class, 'medico_especialidad', 'id_medico', 'id_especialidad')
-                    ->withPivot('fecha_asignacion')
-                    ->withTimestamps(); // Ojo: si medico_especialidad no tiene timestamps, quita ->withTimestamps()
+    public function especialidades(): BelongsToMany
+    {
+        return $this->belongsToMany(Especialidad::class, 'medico_especialidad', 'id_medico', 'id_especialidad');
     }
 
-    public function horarios() {
-        return $this->hasMany(HorarioAtencion::class, 'id_medico', 'id_medico');
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
     }
 }

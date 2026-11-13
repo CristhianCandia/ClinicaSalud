@@ -2,246 +2,180 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Especialidad;
+use App\Models\Medico;
+use App\Models\Rol;
+use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
+// CU-07 Gestionar médicos
 class MedicoController extends Controller
 {
-    /**
-     * Mostrar lista de médicos con búsqueda
-     */
     public function index(Request $request)
-{
-    $query = DB::table('medicos')
-        ->select('medicos.*', 'usuarios.nombre_usuario', 'usuarios.estado as usuario_estado')
-        ->leftJoin('usuarios', 'medicos.usuario_id', '=', 'usuarios.id');
+    {
+        $buscar = trim((string) $request->input('buscar', ''));
+        $especialidad = $request->input('especialidad');
+        $like = '%' . $buscar . '%';
 
-    // Búsqueda por nombre, apellido, código o registro profesional
-    if ($request->filled('buscar')) {
-        $buscar = $request->buscar;
-        $query->where(function($q) use ($buscar) {
-            $q->where('medicos.nombres', 'like', "%{$buscar}%")
-              ->orWhere('medicos.apellidos', 'like', "%{$buscar}%")
-              ->orWhere('medicos.codigo', 'like', "%{$buscar}%")
-              ->orWhere('medicos.registro_profesional', 'like', "%{$buscar}%");
-        });
+        $medicos = Medico::query()
+            ->with('especialidades')
+            ->when($buscar !== '', function ($q) use ($like) {
+                $q->where(function ($w) use ($like) {
+                    $w->where('codigo', 'ilike', $like)
+                      ->orWhere('nombres', 'ilike', $like)
+                      ->orWhere('apellidos', 'ilike', $like);
+                });
+            })
+            ->when($especialidad, fn ($q) => $q->whereHas('especialidades',
+                fn ($e) => $e->where('especialidad.id_especialidad', $especialidad)))
+            ->orderBy('codigo')
+            ->get();
+
+        return view('admin.medicos.index', [
+            'medicos' => $medicos,
+            'especialidades' => Especialidad::where('estado', true)->orderBy('nombre')->get(),
+            'buscar' => $buscar,
+            'especialidadSeleccionada' => $especialidad,
+        ]);
     }
 
-    // Filtrar por especialidad
-    if ($request->filled('especialidad')) {
-        $query->whereHas('especialidades', function($q) use ($request) {
-            $q->where('especialidad_id', $request->especialidad);
-        });
+    public function create()
+    {
+        return view('admin.medicos.form', $this->datosFormulario(null));
     }
 
-    $medicos = $query->orderBy('medicos.created_at', 'desc')->get();
-
-    // Obtener especialidades activas para el formulario y filtro
-    $especialidades = DB::table('especialidades')
-        ->where('estado', true)
-        ->orderBy('nombre', 'asc')
-        ->get();
-
-    // Obtener usuarios con rol MÉDICO para vincular
-    $usuariosMedico = DB::table('usuarios')
-        ->join('roles', 'usuarios.rol_id', '=', 'roles.id')
-        ->where('roles.nombre', 'MEDICO')
-        ->whereNull('usuarios.deleted_at')
-        ->select('usuarios.id', 'usuarios.nombre_usuario', 'usuarios.correo')
-        ->get();
-
-    // Obtener especialidades de cada médico
-    foreach ($medicos as $medico) {
-        $medico->especialidades = DB::table('especialidad_medico')
-            ->join('especialidades', 'especialidad_medico.especialidad_id', '=', 'especialidades.id')
-            ->where('especialidad_medico.medico_id', $medico->id)
-            ->pluck('especialidades.nombre')
-            ->implode(', ');
-    }
-
-    return view('admin.medicos.index', compact('medicos', 'especialidades', 'usuariosMedico'));
-}
-
-    /**
-     * Registrar nuevo médico
-     */
     public function store(Request $request)
     {
-        // Validación
-        $request->validate([
-            'registro_profesional' => 'required|string|max:20|unique:medicos,registro_profesional',
-            'nombres' => 'required|string|max:60',
-            'apellidos' => 'required|string|max:60',
-            'telefono' => 'required|string|max:15',
-            'correo' => 'required|email|max:120|unique:medicos,correo',
-            'especialidades' => 'required|array|min:1',
-            'especialidades.*' => 'exists:especialidades,id',
-            'usuario_id' => 'nullable|exists:usuarios,id',
-        ], [
-            'registro_profesional.unique' => 'Ya existe un médico con el registro profesional: ' . $request->registro_profesional,
-            'correo.unique' => 'Ya existe un médico con el correo: ' . $request->correo,
-            'especialidades.required' => 'Marque al menos una especialidad.',
-            'especialidades.min' => 'Marque al menos una especialidad.',
-        ]);
+        $datos = $request->validate($this->reglas(null), $this->mensajes());
 
-        DB::transaction(function () use ($request) {
-            // Insertar médico (el código MED-0001 lo genera el trigger automáticamente)
-            $medicoId = DB::table('medicos')->insertGetId([
-                'registro_profesional' => $request->registro_profesional,
-                'nombres' => $request->nombres,
-                'apellidos' => $request->apellidos,
-                'telefono' => $request->telefono,
-                'correo' => $request->correo,
-                'usuario_id' => $request->usuario_id ?: null,
+        DB::transaction(function () use ($datos) {
+            // Flujo 5: código MED-0001, MED-0002, ... (mismo criterio que CU-04)
+            $id = (int) DB::selectOne("SELECT nextval(pg_get_serial_sequence('medico','id_medico')) AS id")->id;
+
+            $medico = new Medico();
+            $medico->forceFill([
+                'id_medico' => $id,
+                'codigo' => 'MED-' . str_pad($id, 4, '0', STR_PAD_LEFT),
+                'registro_profesional' => $datos['registro_profesional'],
+                'nombres' => $datos['nombres'],
+                'apellidos' => $datos['apellidos'],
+                'telefono' => $datos['telefono'],
+                'correo' => $datos['correo'],
+                'id_usuario' => $datos['id_usuario'] ?? null,
                 'estado' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+                'fecha_creacion' => now(),
+            ])->save();
 
-            // Insertar especialidades del médico
-            foreach ($request->especialidades as $especialidadId) {
-                DB::table('especialidad_medico')->insert([
-                    'medico_id' => $medicoId,
-                    'especialidad_id' => $especialidadId,
-                    'created_at' => now(),
-                ]);
-            }
+            $medico->especialidades()->attach($datos['especialidades']);
         });
 
-        return back()->with('exito', 'Médico registrado.');
+        return redirect()->route('admin.medicos.index')->with('exito', 'Médico registrado.');
     }
 
-    /**
-     * Cargar datos para editar
-     */
     public function edit($id)
     {
-        $medico = DB::table('medicos')
-            ->leftJoin('usuarios', 'medicos.usuario_id', '=', 'usuarios.id')
-            ->select('medicos.*', 'usuarios.nombre_usuario')
-            ->where('medicos.id', $id)
-            ->first();
+        $medico = Medico::with('especialidades')->findOrFail($id);
 
-        if (!$medico) {
-            return back()->with('error', 'Médico no encontrado.');
-        }
-
-        // Obtener especialidades del médico
-        $medico->especialidades_seleccionadas = DB::table('especialidad_medico')
-            ->where('medico_id', $id)
-            ->pluck('especialidad_id')
-            ->toArray();
-
-        $medicos = DB::table('medicos')
-            ->select('medicos.*', 'usuarios.nombre_usuario', 'usuarios.estado as usuario_estado')
-            ->leftJoin('usuarios', 'medicos.usuario_id', '=', 'usuarios.id')
-            ->orderBy('medicos.created_at', 'desc')
-            ->get();
-
-        // Obtener especialidades de cada médico
-        foreach ($medicos as $m) {
-            $m->especialidades = DB::table('especialidad_medico')
-                ->join('especialidades', 'especialidad_medico.especialidad_id', '=', 'especialidades.id')
-                ->where('especialidad_medico.medico_id', $m->id)
-                ->pluck('especialidades.nombre')
-                ->implode(', ');
-        }
-
-        $especialidades = DB::table('especialidades')
-            ->where('estado', true)
-            ->orderBy('nombre', 'asc')
-            ->get();
-
-        $usuariosMedico = DB::table('usuarios')
-            ->join('roles', 'usuarios.rol_id', '=', 'roles.id')
-            ->where('roles.nombre', 'MEDICO')
-            ->whereNull('usuarios.deleted_at')
-            ->select('usuarios.id', 'usuarios.nombre_usuario', 'usuarios.correo')
-            ->get();
-
-        $medicoEditando = $medico;
-
-        return view('admin.medicos.index', compact('medicos', 'especialidades', 'usuariosMedico', 'medicoEditando'));
+        return view('admin.medicos.form', $this->datosFormulario($medico));
     }
 
-    /**
-     * Actualizar médico
-     */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'registro_profesional' => 'required|string|max:20|unique:medicos,registro_profesional,' . $id,
-            'nombres' => 'required|string|max:60',
-            'apellidos' => 'required|string|max:60',
-            'telefono' => 'required|string|max:15',
-            'correo' => 'required|email|max:120|unique:medicos,correo,' . $id,
-            'especialidades' => 'required|array|min:1',
-            'especialidades.*' => 'exists:especialidades,id',
-            'usuario_id' => 'nullable|exists:usuarios,id',
-        ], [
-            'registro_profesional.unique' => 'Ya existe un médico con el registro profesional: ' . $request->registro_profesional,
-            'correo.unique' => 'Ya existe un médico con el correo: ' . $request->correo,
-            'especialidades.required' => 'Marque al menos una especialidad.',
-            'especialidades.min' => 'Marque al menos una especialidad.',
-        ]);
+        $medico = Medico::findOrFail($id);
+        $datos = $request->validate($this->reglas($medico->id_medico), $this->mensajes());
 
-        DB::transaction(function () use ($request, $id) {
-            // Actualizar médico
-            DB::table('medicos')->where('id', $id)->update([
-                'registro_profesional' => $request->registro_profesional,
-                'nombres' => $request->nombres,
-                'apellidos' => $request->apellidos,
-                'telefono' => $request->telefono,
-                'correo' => $request->correo,
-                'usuario_id' => $request->usuario_id ?: null,
-                'updated_at' => now(),
-            ]);
+        DB::transaction(function () use ($medico, $datos) {
+            $medico->forceFill([
+                'registro_profesional' => $datos['registro_profesional'],
+                'nombres' => $datos['nombres'],
+                'apellidos' => $datos['apellidos'],
+                'telefono' => $datos['telefono'],
+                'correo' => $datos['correo'],
+                'id_usuario' => $datos['id_usuario'] ?? null,
+                'fecha_actualizacion' => now(),
+            ])->save();
 
-            // Eliminar especialidades anteriores
-            DB::table('especialidad_medico')->where('medico_id', $id)->delete();
+            $medico->especialidades()->sync($datos['especialidades']);
+        });
 
-            // Insertar nuevas especialidades
-            foreach ($request->especialidades as $especialidadId) {
-                DB::table('especialidad_medico')->insert([
-                    'medico_id' => $id,
-                    'especialidad_id' => $especialidadId,
-                    'created_at' => now(),
-                ]);
+        return redirect()->route('admin.medicos.index')->with('exito', 'Médico actualizado.');
+    }
+
+    public function toggleEstado($id)
+    {
+        $medico = Medico::findOrFail($id);
+        $nuevoEstado = ! $medico->estado;
+
+        // Igual que CU-04: al desactivar al médico, también se desactiva su cuenta
+        DB::transaction(function () use ($medico, $nuevoEstado) {
+            $medico->forceFill(['estado' => $nuevoEstado, 'fecha_actualizacion' => now()])->save();
+
+            if ($medico->id_usuario) {
+                Usuario::where('id_usuario', $medico->id_usuario)->update(['estado' => $nuevoEstado]);
             }
         });
 
-        return redirect()->route('admin.medicos.index')
-            ->with('exito', 'Médico actualizado.');
+        return back()->with('exito', $nuevoEstado ? 'Médico activado.' : 'Médico desactivado.');
     }
 
-    /**
-     * Activar/Desactivar médico
-     */
-    public function toggleEstado($id)
+    private function reglas(?int $id): array
     {
-        $medico = DB::table('medicos')->where('id', $id)->first();
+        return [
+            'registro_profesional' => ['required', 'string', 'max:20',
+                Rule::unique('medico', 'registro_profesional')->ignore($id, 'id_medico')],
+            'nombres' => ['required', 'string', 'max:60'],
+            'apellidos' => ['required', 'string', 'max:60'],
+            'telefono' => ['required', 'string', 'max:15'],
+            'correo' => ['required', 'email', 'max:120',
+                Rule::unique('medico', 'correo')->ignore($id, 'id_medico')],
+            'id_usuario' => ['nullable', 'integer', 'exists:usuario,id_usuario',
+                Rule::unique('medico', 'id_usuario')->ignore($id, 'id_medico')],
+            'especialidades' => ['required', 'array', 'min:1'],
+            'especialidades.*' => ['integer', 'exists:especialidad,id_especialidad'],
+        ];
+    }
 
-        if (!$medico) {
-            return back()->with('error', 'Médico no encontrado.');
-        }
+    private function mensajes(): array
+    {
+        return [
+            'registro_profesional.required' => 'El registro profesional es obligatorio.',
+            'registro_profesional.unique' => 'Ya existe un médico con este registro profesional.',
+            'nombres.required' => 'Los nombres son obligatorios.',
+            'apellidos.required' => 'Los apellidos son obligatorios.',
+            'telefono.required' => 'El teléfono es obligatorio.',
+            'correo.required' => 'El correo electrónico es obligatorio.',
+            'correo.email' => 'Ingrese un correo electrónico válido.',
+            'correo.unique' => 'Ya existe un médico con este correo.',
+            'id_usuario.unique' => 'Esa cuenta ya está vinculada a otro médico.',
+            'especialidades.required' => 'Marque al menos una especialidad.',
+            'especialidades.min' => 'Marque al menos una especialidad.',
+        ];
+    }
 
-        $nuevoEstado = !$medico->estado;
+    private function datosFormulario(?Medico $medico): array
+    {
+        $rolMedico = Rol::where('nombre', 'MEDICO')->value('id_rol');
 
-        DB::table('medicos')->where('id', $id)->update([
-            'estado' => $nuevoEstado,
-            'updated_at' => now(),
-        ]);
+        // Cuentas que ya tienen otro médico no se ofrecen de nuevo
+        $ocupadas = Medico::whereNotNull('id_usuario')
+            ->when($medico, fn ($q) => $q->where('id_medico', '!=', $medico->id_medico))
+            ->pluck('id_usuario');
 
-        // Si tiene usuario vinculado, actualizar también su estado
-        if ($medico->usuario_id) {
-            DB::table('usuarios')->where('id', $medico->usuario_id)->update([
-                'estado' => $nuevoEstado,
-                'updated_at' => now(),
-            ]);
-        }
+        // Se muestran las activas y también las inactivas que el médico ya tenga marcadas
+        $marcadas = $medico ? $medico->especialidades->pluck('id_especialidad') : collect();
 
-        $accion = $nuevoEstado ? 'activado' : 'desactivado';
-        return back()->with('exito', "Médico {$accion}.");
+        return [
+            'medico' => $medico,
+            'especialidades' => Especialidad::where('estado', true)
+                ->orWhereIn('id_especialidad', $marcadas)
+                ->orderBy('nombre')
+                ->get(),
+            'cuentas' => Usuario::where('id_rol', $rolMedico)
+                ->whereNotIn('id_usuario', $ocupadas)
+                ->orderBy('nombre_usuario')
+                ->get(),
+        ];
     }
 }

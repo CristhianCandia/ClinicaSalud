@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+// Tabla "especialidad" del esquema v3 (no usa created_at ni updated_at).
 class Especialidad extends Model
 {
     protected $table = 'especialidad';
@@ -10,9 +12,9 @@ class Especialidad extends Model
     public $timestamps = false;
 
     protected $fillable = ['nombre', 'descripcion', 'estado'];
-    protected $casts = ['estado' => 'boolean', 'fecha_creacion' => 'datetime'];
 
-    public function medicos() {
-        return $this->belongsToMany(Medico::class, 'medico_especialidad', 'id_especialidad', 'id_medico');
-    }
+    protected $casts = [
+        'estado' => 'boolean',
+        'fecha_creacion' => 'datetime',
+    ];
 }

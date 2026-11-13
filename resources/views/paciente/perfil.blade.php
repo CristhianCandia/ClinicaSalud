@@ -1,96 +1,84 @@
 @extends('layouts.paciente')
 
 @section('title', 'Mi perfil')
-@section('page-title', 'Mi perfil')
 
 @section('content')
-    <div class="card">
-        <h3 style="color: #2c3e50; font-size: 16px; margin-bottom: 15px;">Datos personales y contacto</h3>
-        <p style="color: #7f8c8d; font-size: 13px; margin-bottom: 20px;">
-            Actualiza tu teléfono, correo y dirección. El CI no puede ser modificado.
-        </p>
+    <h2>Mi perfil</h2>
+    <p class="sub">Datos personales y de contacto</p>
 
-        <form method="POST" action="{{ route('paciente.perfil.update') }}">
+    @if ($errors->any())
+        <div class="alerta" style="margin-top: 16px;">
+            <ul style="margin: 0; padding-left: 18px;">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <div class="panel" style="margin-top: 20px; max-width: 820px;">
+        <form method="POST" action="{{ route('paciente.perfil.update') }}" class="formulario">
             @csrf
             @method('PUT')
 
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
-                <div>
-                    <label style="display: block; margin-bottom: 5px; color: #34495e; font-size: 13px; font-weight: 500;">
-                        CI (no editable)
-                    </label>
-                    <input type="text" value="{{ $paciente->ci }}" disabled
-                           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; background: #ecf0f1;">
-                </div>
-
-                <div>
-                    <label style="display: block; margin-bottom: 5px; color: #34495e; font-size: 13px; font-weight: 500;">
-                        Nombres
-                    </label>
-                    <input type="text" value="{{ $paciente->nombres }}" disabled
-                           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; background: #ecf0f1;">
-                </div>
-
-                <div>
-                    <label style="display: block; margin-bottom: 5px; color: #34495e; font-size: 13px; font-weight: 500;">
-                        Apellidos
-                    </label>
-                    <input type="text" value="{{ $paciente->apellidos }}" disabled
-                           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; background: #ecf0f1;">
-                </div>
+            <div>
+                <label>CI</label>
+                <input type="text" value="{{ $paciente->ci }}" disabled>
+                <small class="sub">El CI no se puede cambiar. Si hay un error, acuda a recepción.</small>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
-                <div>
-                    <label style="display: block; margin-bottom: 5px; color: #34495e; font-size: 13px; font-weight: 500;">
-                        Fecha de nacimiento
-                    </label>
-                    <input type="text" value="{{ \Carbon\Carbon::parse($paciente->fecha_nacimiento)->format('d/m/Y') }}" disabled
-                           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; background: #ecf0f1;">
-                </div>
-
-                <div>
-                    <label style="display: block; margin-bottom: 5px; color: #34495e; font-size: 13px; font-weight: 500;">
-                        Sexo
-                    </label>
-                    <input type="text" value="{{ $paciente->sexo == 'M' ? 'Masculino' : ($paciente->sexo == 'F' ? 'Femenino' : 'Otro') }}" disabled
-                           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; background: #ecf0f1;">
-                </div>
-
-                <div>
-                    <label style="display: block; margin-bottom: 5px; color: #34495e; font-size: 13px; font-weight: 500;">
-                        Teléfono <span style="color: #e74c3c;">*</span>
-                    </label>
-                    <input type="text" name="telefono" value="{{ old('telefono', $paciente->telefono) }}" required
-                           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                    @error('telefono')
-                        <small style="color: #e74c3c; font-size: 12px;">{{ $message }}</small>
-                    @enderror
-                </div>
+            <div>
+                <label>Código de paciente</label>
+                <input type="text" value="{{ $paciente->codigo }}" disabled>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
-                <div>
-                    <label style="display: block; margin-bottom: 5px; color: #34495e; font-size: 13px; font-weight: 500;">
-                        Correo electrónico <span style="color: #e74c3c;">*</span>
-                    </label>
-                    <input type="email" name="correo" value="{{ old('correo', $paciente->correo) }}" required
-                           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                    @error('correo')
-                        <small style="color: #e74c3c; font-size: 12px;">{{ $message }}</small>
-                    @enderror
-                </div>
-
-                <div>
-                    <label style="display: block; margin-bottom: 5px; color: #34495e; font-size: 13px; font-weight: 500;">
-                        Dirección
-                    </label>
-                    <input type="text" name="direccion" value="{{ old('direccion', $paciente->direccion) }}"
-                           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                </div>
+            <div>
+                <label>Nombres</label>
+                <input type="text" value="{{ $paciente->nombres }}" disabled>
             </div>
 
-            <button type="submit" class="btn btn-primary">Guardar</button>
+            <div>
+                <label>Apellidos</label>
+                <input type="text" value="{{ $paciente->apellidos }}" disabled>
+            </div>
+
+            <div>
+                <label>Fecha de nacimiento</label>
+                <input type="text"
+                       value="{{ \Carbon\Carbon::parse($paciente->fecha_nacimiento)->format('d/m/Y') }}" disabled>
+            </div>
+
+            <div>
+                <label>Sexo</label>
+                <input type="text"
+                       value="{{ ['M' => 'Masculino', 'F' => 'Femenino', 'O' => 'Otro'][$paciente->sexo] ?? $paciente->sexo }}"
+                       disabled>
+            </div>
+
+            <div>
+                <label for="telefono">Teléfono *</label>
+                <input id="telefono" name="telefono" type="text"
+                       value="{{ old('telefono', $paciente->telefono) }}">
+                @error('telefono') <small class="error-campo">{{ $message }}</small> @enderror
+            </div>
+
+            <div>
+                <label for="correo">Correo electrónico *</label>
+                <input id="correo" name="correo" type="email"
+                       value="{{ old('correo', $paciente->correo) }}">
+                @error('correo') <small class="error-campo">{{ $message }}</small> @enderror
+            </div>
+
+            <div style="grid-column: 1 / -1;">
+                <label for="direccion">Dirección</label>
+                <input id="direccion" name="direccion" type="text"
+                       value="{{ old('direccion', $paciente->direccion) }}">
+                @error('direccion') <small class="error-campo">{{ $message }}</small> @enderror
+            </div>
+
+            <div class="acciones-form" style="grid-column: 1 / -1;">
+                <button type="submit" class="boton">Guardar</button>
+            </div>
         </form>
     </div>
 @endsection
