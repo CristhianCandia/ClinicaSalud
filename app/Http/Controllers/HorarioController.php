@@ -2,249 +2,146 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\HorarioAtencion;
+use App\Models\Medico;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
+// CU-08 Gestionar horarios de atención
 class HorarioController extends Controller
 {
-    /**
-     * Mostrar formulario y lista de horarios por médico
-     */
     public function index(Request $request)
     {
-        $medicoId = $request->input('medico_id');
-        $medicoSeleccionado = null;
-        $horarios = collect();
-
-        if ($medicoId) {
-            $medicoSeleccionado = DB::table('medicos')
-                ->where('id', $medicoId)
-                ->first();
-
-            if ($medicoSeleccionado) {
-                $horarios = DB::table('horarios_atencion')
-                    ->where('medico_id', $medicoId)
-                    ->orderBy('dia_semana')
-                    ->orderBy('hora_inicio')
-                    ->get();
-
-                // Calcular citas por bloque
-                foreach ($horarios as $horario) {
-                    $duracionMinutos = $horario->duracion_cita_min;
-                    $tiempoTotalMinutos = (strtotime($horario->hora_fin) - strtotime($horario->hora_inicio)) / 60;
-                    $horario->citas_por_bloque = floor($tiempoTotalMinutos / $duracionMinutos);
-                }
-            }
-        }
-
-        // Obtener todos los médicos activos para el selector
-        // Obtener todos los médicos para el selector
-        $medicos = DB::table('medicos')
-            ->orderBy('nombres')
-            ->get();
-
-        return view('admin.horarios.index', compact('medicos', 'medicoSeleccionado', 'horarios'));
+        return $this->vista($request, null);
     }
 
-    /**
-     * Registrar nuevo bloque de horario
-     */
     public function store(Request $request)
     {
-        $request->validate([
-            'medico_id' => 'required|exists:medicos,id',
-            'dia_semana' => 'required|integer|between:1,7',
-            'hora_inicio' => 'required',
-            'hora_fin' => 'required|after:hora_inicio',
-            'duracion_cita_min' => 'required|integer|between:10,120',
-        ], [
-            'hora_fin.after' => 'La hora final debe ser posterior a la hora inicial.',
-            'duracion_cita_min.between' => 'La duración debe estar entre 10 y 120 minutos.',
-        ]);
+        $datos = $this->validar($request, null);
 
-        // Verificar que no haya superposición de horarios
-        $superposicion = DB::table('horarios_atencion')
-            ->where('medico_id', $request->medico_id)
-            ->where('dia_semana', $request->dia_semana)
-            ->where('estado', true)
-            ->where(function($query) use ($request) {
-                $query->where(function($q) use ($request) {
-                    // El nuevo horario empieza dentro de un horario existente
-                    $q->where('hora_inicio', '<=', $request->hora_inicio)
-                      ->where('hora_fin', '>', $request->hora_inicio);
-                })->orWhere(function($q) use ($request) {
-                    // El nuevo horario termina dentro de un horario existente
-                    $q->where('hora_inicio', '<', $request->hora_fin)
-                      ->where('hora_fin', '>=', $request->hora_fin);
-                })->orWhere(function($q) use ($request) {
-                    // El nuevo horario envuelve completamente un horario existente
-                    $q->where('hora_inicio', '>=', $request->hora_inicio)
-                      ->where('hora_fin', '<=', $request->hora_fin);
-                });
-            })
-            ->first();
+        HorarioAtencion::create($datos + ['estado' => true]);
 
-        if ($superposicion) {
-            $diaNombre = $this->getDiaNombre($superposicion->dia_semana);
-            $horaInicio = date('H:i', strtotime($superposicion->hora_inicio));
-            $horaFin = date('H:i', strtotime($superposicion->hora_fin));
-            
-            return back()
-                ->withInput()
-                ->with('error', "El horario se cruza con el bloque {$diaNombre} {$horaInicio} - {$horaFin} ya registrado.");
-        }
-
-        // Insertar horario
-        DB::table('horarios_atencion')->insert([
-            'medico_id' => $request->medico_id,
-            'dia_semana' => $request->dia_semana,
-            'hora_inicio' => $request->hora_inicio,
-            'hora_fin' => $request->hora_fin,
-            'duracion_cita_min' => $request->duracion_cita_min,
-            'estado' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return back()->with('exito', 'Bloque de horario registrado.');
+        return redirect()->route('admin.horarios.index', ['medico' => $datos['id_medico']])
+            ->with('exito', 'Horario guardado.');
     }
 
-    /**
-     * Cargar datos para editar
-     */
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
-        $horario = DB::table('horarios_atencion')
-            ->where('id', $id)
-            ->first();
-
-        if (!$horario) {
-            return back()->with('error', 'Horario no encontrado.');
-        }
-
-        $medicoId = $horario->medico_id;
-        
-        $medicoSeleccionado = DB::table('medicos')
-            ->where('id', $medicoId)
-            ->first();
-
-        $horarios = DB::table('horarios_atencion')
-            ->where('medico_id', $medicoId)
-            ->orderBy('dia_semana')
-            ->orderBy('hora_inicio')
-            ->get();
-
-        // Calcular citas por bloque
-        foreach ($horarios as $h) {
-            $duracionMinutos = $h->duracion_cita_min;
-            $tiempoTotalMinutos = (strtotime($h->hora_fin) - strtotime($h->hora_inicio)) / 60;
-            $h->citas_por_bloque = floor($tiempoTotalMinutos / $duracionMinutos);
-        }
-
-        $medicos = DB::table('medicos')
-            ->where('estado', true)
-            ->orderBy('nombres')
-            ->get();
-
-        $horarioEditando = $horario;
-
-        return view('admin.horarios.index', compact('medicos', 'medicoSeleccionado', 'horarios', 'horarioEditando'));
+        return $this->vista($request, HorarioAtencion::findOrFail($id));
     }
 
-    /**
-     * Actualizar horario
-     */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'medico_id' => 'required|exists:medicos,id',
-            'dia_semana' => 'required|integer|between:1,7',
-            'hora_inicio' => 'required',
-            'hora_fin' => 'required|after:hora_inicio',
-            'duracion_cita_min' => 'required|integer|between:10,120',
-        ]);
+        $horario = HorarioAtencion::findOrFail($id);
+        $datos = $this->validar($request, $horario->id_horario);
 
-        $horarioActual = DB::table('horarios_atencion')->where('id', $id)->first();
+        $horario->update($datos);
 
-        // Verificar superposición (excluyendo el horario actual)
-        $superposicion = DB::table('horarios_atencion')
-            ->where('medico_id', $request->medico_id)
-            ->where('dia_semana', $request->dia_semana)
-            ->where('id', '!=', $id)
-            ->where('estado', true)
-            ->where(function($query) use ($request) {
-                $query->where(function($q) use ($request) {
-                    $q->where('hora_inicio', '<=', $request->hora_inicio)
-                      ->where('hora_fin', '>', $request->hora_inicio);
-                })->orWhere(function($q) use ($request) {
-                    $q->where('hora_inicio', '<', $request->hora_fin)
-                      ->where('hora_fin', '>=', $request->hora_fin);
-                })->orWhere(function($q) use ($request) {
-                    $q->where('hora_inicio', '>=', $request->hora_inicio)
-                      ->where('hora_fin', '<=', $request->hora_fin);
-                });
-            })
-            ->first();
-
-        if ($superposicion) {
-            $diaNombre = $this->getDiaNombre($superposicion->dia_semana);
-            $horaInicio = date('H:i', strtotime($superposicion->hora_inicio));
-            $horaFin = date('H:i', strtotime($superposicion->hora_fin));
-            
-            return back()
-                ->withInput()
-                ->with('error', "El horario se cruza con el bloque {$diaNombre} {$horaInicio} - {$horaFin} ya registrado.");
-        }
-
-        DB::table('horarios_atencion')->where('id', $id)->update([
-            'medico_id' => $request->medico_id,
-            'dia_semana' => $request->dia_semana,
-            'hora_inicio' => $request->hora_inicio,
-            'hora_fin' => $request->hora_fin,
-            'duracion_cita_min' => $request->duracion_cita_min,
-            'updated_at' => now(),
-        ]);
-
-        return redirect()->route('admin.horarios.index', ['medico_id' => $request->medico_id])
+        return redirect()->route('admin.horarios.index', ['medico' => $horario->id_medico])
             ->with('exito', 'Horario actualizado.');
     }
 
-    /**
-     * Activar/Desactivar horario
-     */
     public function toggleEstado($id)
     {
-        $horario = DB::table('horarios_atencion')->where('id', $id)->first();
+        $horario = HorarioAtencion::findOrFail($id);
+        $nuevoEstado = ! $horario->estado;
 
-        if (!$horario) {
-            return back()->with('error', 'Horario no encontrado.');
+        // No se reactiva un bloque que ahora se cruza con otro activo del mismo día
+        if ($nuevoEstado && $this->bloqueCruzado($horario->id_medico, $horario->dia_semana,
+                $horario->hora_inicio, $horario->hora_fin, $horario->id_horario)) {
+            return back()->with('error', 'No se puede activar: el bloque se cruza con otro activo del mismo día.');
         }
 
-        $nuevoEstado = !$horario->estado;
+        $horario->update(['estado' => $nuevoEstado]);
 
-        DB::table('horarios_atencion')->where('id', $id)->update([
-            'estado' => $nuevoEstado,
-            'updated_at' => now(),
-        ]);
-
-        $accion = $nuevoEstado ? 'activado' : 'desactivado';
-        return back()->with('exito', "Bloque de horario {$accion}.");
+        return back()->with('exito', $nuevoEstado ? 'Horario activado.' : 'Horario desactivado.');
     }
 
-    /**
-     * Obtener nombre del día de la semana
-     */
-    private function getDiaNombre($numero)
+    private function vista(Request $request, ?HorarioAtencion $editando)
     {
-        $dias = [
-            1 => 'Lunes',
-            2 => 'Martes',
-            3 => 'Miércoles',
-            4 => 'Jueves',
-            5 => 'Viernes',
-            6 => 'Sábado',
-            7 => 'Domingo'
+        $idMedico = $editando?->id_medico ?? $request->input('medico');
+        $medico = $idMedico ? Medico::find($idMedico) : null;
+
+        $bloques = $medico
+            ? HorarioAtencion::where('id_medico', $medico->id_medico)
+                ->orderBy('dia_semana')->orderBy('hora_inicio')->get()
+            : collect();
+
+        return view('admin.horarios.index', [
+            'medicos' => Medico::orderBy('apellidos')->orderBy('nombres')->get(),
+            'medico' => $medico,
+            'bloques' => $bloques,
+            'editando' => $editando,
+            'dias' => HorarioAtencion::DIAS,
+            'turnos' => HorarioAtencion::TURNOS,
+        ]);
+    }
+
+    // Convierte el turno elegido en horas fijas y aplica las validaciones
+    private function validar(Request $request, ?int $idHorario): array
+    {
+        $entrada = $request->validate([
+            'id_medico' => ['required', 'integer', 'exists:medico,id_medico'],
+            'dia_semana' => ['required', 'integer', 'between:1,7'],
+            'turno' => ['required', Rule::in(array_keys(HorarioAtencion::TURNOS))],
+        ], [
+            'id_medico.required' => 'Seleccione un médico.',
+            'id_medico.exists' => 'El médico seleccionado no existe.',
+            'dia_semana.required' => 'Seleccione un día.',
+            'turno.required' => 'Seleccione un turno.',
+            'turno.in' => 'Seleccione un turno válido.',
+        ]);
+
+        $turno = HorarioAtencion::TURNOS[$entrada['turno']];
+
+        $datos = [
+            'id_medico' => $entrada['id_medico'],
+            'dia_semana' => $entrada['dia_semana'],
+            'hora_inicio' => $turno['inicio'],
+            'hora_fin' => $turno['fin'],
+            'duracion_cita_min' => HorarioAtencion::DURACION_CITA_MIN,
         ];
-        return $dias[$numero] ?? '';
+
+        // Excepción: el bloque se cruza con otro del mismo día
+        $cruce = $this->bloqueCruzado($datos['id_medico'], $datos['dia_semana'],
+            $datos['hora_inicio'], $datos['hora_fin'], $idHorario);
+
+        if ($cruce) {
+            throw ValidationException::withMessages([
+                'turno' => 'El horario se cruza con el bloque '
+                    . HorarioAtencion::DIAS[$cruce->dia_semana] . ' '
+                    . substr($cruce->hora_inicio, 0, 5) . ' – '
+                    . substr($cruce->hora_fin, 0, 5) . ' ya registrado.',
+            ]);
+        }
+
+        // Un médico atiende un solo turno por día
+        $otroTurno = HorarioAtencion::where('id_medico', $datos['id_medico'])
+            ->where('dia_semana', $datos['dia_semana'])
+            ->where('estado', true)
+            ->where('hora_inicio', '!=', $datos['hora_inicio'])
+            ->when($idHorario, fn ($q) => $q->where('id_horario', '!=', $idHorario))
+            ->exists();
+
+        if ($otroTurno) {
+            throw ValidationException::withMessages([
+                'turno' => 'Este médico ya tiene otro turno ese día. Un médico atiende un solo turno por día.',
+            ]);
+        }
+
+        return $datos;
+    }
+
+    // Dos bloques se cruzan si uno empieza antes de que termine el otro y termina después de que empieza
+    private function bloqueCruzado(int $idMedico, int $dia, string $inicio, string $fin, ?int $ignorarId): ?HorarioAtencion
+    {
+        return HorarioAtencion::where('id_medico', $idMedico)
+            ->where('dia_semana', $dia)
+            ->where('estado', true)
+            ->when($ignorarId, fn ($q) => $q->where('id_horario', '!=', $ignorarId))
+            ->where('hora_inicio', '<', $fin)
+            ->where('hora_fin', '>', $inicio)
+            ->first();
     }
 }

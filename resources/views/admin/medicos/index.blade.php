@@ -60,7 +60,7 @@
                             </span>
                         </td>
                         <td class="acciones">
-                            <a class="boton pequeno" href="{{ route('admin.medicos.edit', $m->id_medico) }}">Editar</a>
+                            <a class="boton pequeno gris" href="{{ route('admin.horarios.index', ['medico' => $m->id_medico]) }}">Horarios</a>
                             <button type="button" class="boton pequeno gris" disabled title="Disponible en CU-08">Horarios</button>
                             <form method="POST" action="{{ route('admin.medicos.toggle', $m->id_medico) }}">
                                 @csrf
