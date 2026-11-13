@@ -17,6 +17,10 @@
             <ul>
                 <li><a href="{{ route('inicio') }}">Inicio</a></li>
                 <li><span class="deshabilitado">Mis citas</span></li>
+                <li><a href="{{ route('disponibilidad.index') }}"
+                       class="{{ request()->routeIs('disponibilidad*') ? 'activo' : '' }}">Disponibilidad</a></li>
+                <li><a href="{{ route('citas.create') }}"
+                       class="{{ request()->routeIs('citas.*') ? 'activo' : '' }}">Programar cita</a></li>
                 <li>
                     <a href="{{ route('paciente.perfil') }}"
                        class="{{ request()->routeIs('paciente.perfil*') ? 'activo' : '' }}">Mi perfil</a>

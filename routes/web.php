@@ -9,9 +9,10 @@ use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\PagoController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\DisponibilidadController;
 use App\Http\Controllers\PacienteRegistroController;
 use App\Http\Controllers\PacientePerfilController;
+use App\Http\Controllers\ProgramarCitaController;
 
 // CU-01 Iniciar sesión
 Route::get('/', fn () => redirect()->route(auth()->check() ? 'inicio' : 'login'));
@@ -57,12 +58,6 @@ Route::middleware(['auth', 'rol:ADMINISTRADOR'])->prefix('admin')->name('admin.'
     Route::put('/medicos/{id}', [MedicoController::class, 'update'])->name('medicos.update');
     Route::patch('/medicos/{id}/toggle', [MedicoController::class, 'toggleEstado'])->name('medicos.toggle');
 
-    Route::get('/medicos', [MedicoController::class, 'index'])->name('medicos.index');
-    Route::post('/medicos', [MedicoController::class, 'store'])->name('medicos.store');
-    Route::get('/medicos/{id}/edit', [MedicoController::class, 'edit'])->name('medicos.edit');
-    Route::put('/medicos/{id}', [MedicoController::class, 'update'])->name('medicos.update');
-    Route::patch('/medicos/{id}/toggle', [MedicoController::class, 'toggleEstado'])->name('medicos.toggle');
-
     // Gestión de Horarios (CU-08)
     Route::get('/horarios', [HorarioController::class, 'index'])->name('horarios.index');
     Route::post('/horarios', [HorarioController::class, 'store'])->name('horarios.store');
@@ -98,4 +93,17 @@ Route::post('/registro', [PacienteRegistroController::class, 'store'])
 Route::middleware(['auth', 'rol:PACIENTE'])->group(function () {
     Route::get('/mi-perfil', [PacientePerfilController::class, 'edit'])->name('paciente.perfil');
     Route::put('/mi-perfil', [PacientePerfilController::class, 'update'])->name('paciente.perfil.update');
+});
+
+// CU-09: consulta de disponibilidad (recepcionista y paciente)
+Route::middleware(['auth', 'rol:RECEPCIONISTA,PACIENTE'])
+    ->get('/disponibilidad', [DisponibilidadController::class, 'index'])
+    ->name('disponibilidad.index');
+
+// CU-10: programar cita (recepcionista y paciente)
+// Importante: /citas/programar debe ir antes de /citas/{id}
+Route::middleware(['auth', 'rol:RECEPCIONISTA,PACIENTE'])->group(function () {
+    Route::get('/citas/programar', [ProgramarCitaController::class, 'create'])->name('citas.create');
+    Route::post('/citas', [ProgramarCitaController::class, 'store'])->name('citas.store');
+    Route::get('/citas/{id}', [ProgramarCitaController::class, 'comprobante'])->name('citas.comprobante');
 });

@@ -22,8 +22,8 @@
                 <li><a href="{{ route('recepcionista.pacientes.index') }}" class="{{ request()->routeIs('recepcionista.pacientes.*') ? 'activo' : '' }}">Pacientes</a></li>
 
                 <li class="seccion">Citas</li>
-                <li><span class="deshabilitado">Disponibilidad</span></li>
-                <li><span class="deshabilitado">Programar cita</span></li>
+                <li><a href="{{ route('disponibilidad.index') }}" class="{{ request()->routeIs('disponibilidad*') ? 'activo' : '' }}">Disponibilidad</a></li>
+                <li><a href="{{ route('citas.create') }}" class="{{ request()->routeIs('citas.*') ? 'activo' : '' }}">Programar cita</a></li>
                 <li><span class="deshabilitado">Citas registradas</span></li>
                 <li><span class="deshabilitado">Agenda médica</span></li>
                 <li><span class="deshabilitado">Historial de citas</span></li>
