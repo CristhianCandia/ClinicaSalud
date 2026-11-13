@@ -13,6 +13,9 @@ use App\Http\Controllers\DisponibilidadController;
 use App\Http\Controllers\PacienteRegistroController;
 use App\Http\Controllers\PacientePerfilController;
 use App\Http\Controllers\ProgramarCitaController;
+use App\Http\Controllers\CuentaController;
+use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\ReprogramarCitaController;
 
 // CU-01 Iniciar sesión
 Route::get('/', fn () => redirect()->route(auth()->check() ? 'inicio' : 'login'));
@@ -106,4 +109,22 @@ Route::middleware(['auth', 'rol:RECEPCIONISTA,PACIENTE'])->group(function () {
     Route::get('/citas/programar', [ProgramarCitaController::class, 'create'])->name('citas.create');
     Route::post('/citas', [ProgramarCitaController::class, 'store'])->name('citas.store');
     Route::get('/citas/{id}', [ProgramarCitaController::class, 'comprobante'])->name('citas.comprobante');
+});
+
+// CU-11: cambiar contraseña (todos los roles, sobre su propia cuenta)
+Route::middleware(['auth', 'rol:ADMINISTRADOR,RECEPCIONISTA,MEDICO,PACIENTE'])->group(function () {
+    Route::get('/mi-cuenta', [CuentaController::class, 'index'])->name('cuenta.index');
+    Route::put('/mi-cuenta/contrasena', [CuentaController::class, 'cambiarContrasena'])->name('cuenta.contrasena');
+});
+
+// CU-20: reportes (solo administrador)
+Route::middleware(['auth', 'rol:ADMINISTRADOR'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');
+    Route::get('/reportes/csv', [ReporteController::class, 'csv'])->name('reportes.csv');
+});
+
+// CU-15: reprogramar cita (recepcionista y paciente)
+Route::middleware(['auth', 'rol:RECEPCIONISTA,PACIENTE'])->group(function () {
+    Route::get('/citas/{id}/reprogramar', [ReprogramarCitaController::class, 'edit'])->name('citas.reprogramar.edit');
+    Route::put('/citas/{id}/reprogramar', [ReprogramarCitaController::class, 'update'])->name('citas.reprogramar.update');
 });

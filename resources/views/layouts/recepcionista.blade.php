@@ -32,6 +32,7 @@
                 <li><a href="{{ route('recepcionista.pagos.index') }}" class="{{ request()->routeIs('recepcionista.pagos.*') ? 'activo' : '' }}">Registrar pago / historial</a></li>
 
                 <li class="seccion">Sesión</li>
+                <li><a href="{{ route('cuenta.index') }}" class="{{ request()->routeIs('cuenta*') ? 'activo' : '' }}">Mi cuenta</a></li>
                 <li>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

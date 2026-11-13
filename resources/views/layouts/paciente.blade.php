@@ -25,6 +25,7 @@
                     <a href="{{ route('paciente.perfil') }}"
                        class="{{ request()->routeIs('paciente.perfil*') ? 'activo' : '' }}">Mi perfil</a>
                 </li>
+                <li><a href="{{ route('cuenta.index') }}" class="{{ request()->routeIs('cuenta*') ? 'activo' : '' }}">Mi cuenta</a></li>
                 <li>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

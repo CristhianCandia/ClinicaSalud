@@ -24,7 +24,11 @@
 
         <div class="acciones-form" style="margin-top: 16px;">
             <button type="button" class="boton gris" onclick="window.print()">Imprimir</button>
-            <button type="button" class="boton" disabled title="Disponible en CU-15">Reprogramar</button>
+            @if (in_array($cita->estado, ['PROGRAMADA', 'CONFIRMADA']))
+                <a class="boton" href="{{ route('citas.reprogramar.edit', $cita->id_cita) }}">Reprogramar</a>
+            @else
+                <button type="button" class="boton" disabled>Reprogramar</button>
+            @endif
             <button type="button" class="boton" disabled title="Disponible en CU-22">Confirmar asistencia</button>
             <button type="button" class="boton peligro" disabled title="Disponible en CU-16">Cancelar cita</button>
         </div>

@@ -33,9 +33,10 @@
                 <li><span class="deshabilitado">Agenda médica</span></li>
 
                 <li class="seccion">Reportes</li>
-                <li><span class="deshabilitado">Reportes</span></li>
+                <li><a href="{{ route('admin.reportes.index') }}" class="{{ request()->routeIs('admin.reportes.*') ? 'activo' : '' }}">Reportes</a></li>
 
                 <li class="seccion">Sesión</li>
+                <li><a href="{{ route('cuenta.index') }}" class="{{ request()->routeIs('cuenta*') ? 'activo' : '' }}">Mi cuenta</a></li>
                 <li>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
