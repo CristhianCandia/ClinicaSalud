@@ -96,10 +96,10 @@ return [
         'prefix' => '',
         'prefix_indexes' => true,
         'search_path' => 'public',
-        'sslmode' => 'require',           // ← obligatorio en Neon
-        'options' => '-c channel_binding=require',  // ← obligatorio en Neon
+        'sslmode' => env('DB_SSLMODE', 'require'),
+        'channel_binding' => env('DB_CHANNEL_BINDING', 'require'),  // ← CLAVE NATIVA
         ],
-
+        
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),
